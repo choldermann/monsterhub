@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: ./backend
+    container_name: monsterhub-backend
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./registry.json:/app/registry.json:ro
+    networks:
+      - hub
+
+  frontend:
+    build: ./frontend
+    container_name: monsterhub-frontend
+    restart: unless-stopped
+    ports:
+      - "8888:80"
+    depends_on:
+      - backend
+    networks:
+      - hub
+
+networks:
+  hub:
+    driver: bridge
