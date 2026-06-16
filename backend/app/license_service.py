@@ -1,26 +1,18 @@
-import os
 import httpx
-from typing import Optional
-
-MONSTERSUITE_URL = os.getenv("MONSTERSUITE_URL", "https://monstersuite.de").rstrip("/")
-
-
-def _get_key(monster_id: str) -> Optional[str]:
-    key = os.getenv(f"{monster_id.upper()}_LICENSE_KEY", "").strip()
-    return key or None
+from .settings_service import load_settings
 
 
 async def check_license(monster_id: str) -> dict:
-    key = _get_key(monster_id)
+    settings = load_settings()
+    url = settings.get("monstersuite_url", "https://monstersuite.de").rstrip("/")
+    key = settings.get("license_keys", {}).get(monster_id, "").strip()
+
     if not key:
         return {"configured": False}
 
     try:
         async with httpx.AsyncClient(timeout=8) as client:
-            r = await client.get(
-                f"{MONSTERSUITE_URL}/api/v1/licenses/status",
-                params={"key": key},
-            )
+            r = await client.get(f"{url}/api/v1/licenses/status", params={"key": key})
             data = r.json()
             data["configured"] = True
             return data

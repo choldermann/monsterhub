@@ -6,8 +6,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./registry.json:/app/registry.json:ro
-    env_file:
-      - .env
+      - monsterhub-data:/app/data
     networks:
       - hub
 
@@ -21,6 +20,9 @@ services:
       - backend
     networks:
       - hub
+
+volumes:
+  monsterhub-data:
 
 networks:
   hub:

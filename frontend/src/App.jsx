@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import MonsterCard from "./components/MonsterCard";
+import SettingsModal from "./components/SettingsModal";
 
 const REFRESH_INTERVAL = 10000;
 
@@ -7,6 +8,8 @@ export default function App() {
   const [monsters, setMonsters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [licenseRefreshKey, setLicenseRefreshKey] = useState(0);
 
   const addToast = useCallback((msg) => {
     const id = Date.now();
@@ -47,9 +50,12 @@ export default function App() {
     }
   };
 
-  const runningCount = monsters.filter(
-    (m) => m.status?.state === "running"
-  ).length;
+  const handleSettingsSaved = () => {
+    addToast("✓ Einstellungen gespeichert");
+    setLicenseRefreshKey((k) => k + 1);
+  };
+
+  const runningCount = monsters.filter((m) => m.status?.state === "running").length;
 
   return (
     <div className="app">
@@ -61,11 +67,20 @@ export default function App() {
             <div className="header-subtitle">Lokale Verwaltungszentrale</div>
           </div>
         </div>
-        {!loading && (
-          <div className="header-badge">
-            <span>{runningCount}</span> von {monsters.length} aktiv
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {!loading && (
+            <div className="header-badge">
+              <span>{runningCount}</span> von {monsters.length} aktiv
+            </div>
+          )}
+          <button
+            className="btn-settings"
+            onClick={() => setShowSettings(true)}
+            title="Einstellungen"
+          >
+            ⚙
+          </button>
+        </div>
       </header>
 
       {loading ? (
@@ -73,18 +88,30 @@ export default function App() {
       ) : (
         <div className="grid">
           {monsters.map((m) => (
-            <MonsterCard key={m.id} monster={m} onAction={handleAction} onToast={addToast} />
+            <MonsterCard
+              key={m.id}
+              monster={m}
+              onAction={handleAction}
+              onToast={addToast}
+              licenseRefreshKey={licenseRefreshKey}
+            />
           ))}
         </div>
       )}
 
       <div className="toast-container">
         {toasts.map((t) => (
-          <div key={t.id} className="toast">
-            {t.msg}
-          </div>
+          <div key={t.id} className="toast">{t.msg}</div>
         ))}
       </div>
+
+      {showSettings && (
+        <SettingsModal
+          monsters={monsters}
+          onClose={() => setShowSettings(false)}
+          onSaved={handleSettingsSaved}
+        />
+      )}
     </div>
   );
 }

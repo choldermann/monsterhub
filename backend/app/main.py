@@ -4,6 +4,7 @@ from typing import Optional
 from .docker_service import DockerService
 from .config import load_registry
 from . import license_service
+from .settings_service import load_settings, save_settings
 
 app = FastAPI(title="MonsterHub API")
 
@@ -53,6 +54,17 @@ def stop_monster(monster_id: str):
 def restart_monster(monster_id: str):
     m = _get_monster(monster_id)
     docker_svc.restart_containers(m["containers"])
+    return {"ok": True}
+
+
+@app.get("/api/settings")
+def get_settings():
+    return load_settings()
+
+
+@app.post("/api/settings")
+def post_settings(body: dict):
+    save_settings(body)
     return {"ok": True}
 
 

@@ -137,7 +137,7 @@ function ResourceBars({ stats }) {
   );
 }
 
-export default function MonsterCard({ monster, onAction, onToast }) {
+export default function MonsterCard({ monster, onAction, onToast, licenseRefreshKey }) {
   const [busy, setBusy] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
@@ -168,7 +168,7 @@ export default function MonsterCard({ monster, onAction, onToast }) {
     fetchLicense();
     const interval = setInterval(fetchLicense, 60_000);
     return () => clearInterval(interval);
-  }, [monster.id, state]);
+  }, [monster.id, state, licenseRefreshKey]);
   const containers = monster.status?.containers ?? [];
   const isRunning = state === "running";
   const isNotInstalled = state === "not_installed";
