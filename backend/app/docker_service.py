@@ -1,4 +1,5 @@
 import docker
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional
 
 
@@ -103,6 +104,67 @@ class DockerService:
             "skipped": skipped,
             "errors": errors,
         }
+
+    def get_monster_stats(self, containers: List[str]) -> dict:
+        running = [n for n in containers if self._is_running(n)]
+        if not running:
+            return {"cpu_percent": None, "mem_mb": None, "mem_percent": None, "containers": []}
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(running)) as ex:
+            futures = {ex.submit(self._container_stats, n): n for n in running}
+            for f in as_completed(futures):
+                results.append(f.result())
+
+        total_cpu = sum(r["cpu_percent"] for r in results if r["cpu_percent"] is not None)
+        total_mem_mb = sum(r["mem_mb"] for r in results if r["mem_mb"] is not None)
+        total_mem_percent = sum(r["mem_percent"] for r in results if r["mem_percent"] is not None)
+
+        return {
+            "cpu_percent": round(total_cpu, 1),
+            "mem_mb": round(total_mem_mb, 1),
+            "mem_percent": round(total_mem_percent, 1),
+            "containers": sorted(results, key=lambda r: r["name"]),
+        }
+
+    def _is_running(self, name: str) -> bool:
+        try:
+            return self.client.containers.get(name).status == "running"
+        except Exception:
+            return False
+
+    def _container_stats(self, name: str) -> dict:
+        try:
+            c = self.client.containers.get(name)
+            s = c.stats(stream=False)
+            cpu = self._calc_cpu(s)
+            mem_percent, mem_mb = self._calc_mem(s)
+            return {"name": name, "cpu_percent": round(cpu, 1), "mem_percent": round(mem_percent, 1), "mem_mb": round(mem_mb, 1)}
+        except Exception:
+            return {"name": name, "cpu_percent": None, "mem_percent": None, "mem_mb": None}
+
+    @staticmethod
+    def _calc_cpu(s: dict) -> float:
+        try:
+            cpu_delta = s["cpu_stats"]["cpu_usage"]["total_usage"] - s["precpu_stats"]["cpu_usage"]["total_usage"]
+            sys_delta = s["cpu_stats"]["system_cpu_usage"] - s["precpu_stats"]["system_cpu_usage"]
+            cpus = s["cpu_stats"].get("online_cpus") or len(s["cpu_stats"]["cpu_usage"].get("percpu_usage", [1]))
+            return (cpu_delta / sys_delta) * cpus * 100 if sys_delta > 0 else 0.0
+        except Exception:
+            return 0.0
+
+    @staticmethod
+    def _calc_mem(s: dict) -> tuple[float, float]:
+        try:
+            ms = s["memory_stats"]
+            usage = ms["usage"]
+            limit = ms["limit"]
+            inner = ms.get("stats", {})
+            cache = inner.get("cache", inner.get("inactive_file", 0))
+            actual = max(0, usage - cache)
+            return (actual / limit * 100) if limit > 0 else 0.0, actual / (1024 * 1024)
+        except Exception:
+            return 0.0, 0.0
 
     def get_logs(self, container_name: str, lines: int = 150) -> str:
         try:

@@ -55,6 +55,12 @@ def restart_monster(monster_id: str):
     return {"ok": True}
 
 
+@app.get("/api/monsters/{monster_id}/stats")
+def get_stats(monster_id: str):
+    m = _get_monster(monster_id)
+    return docker_svc.get_monster_stats(m["containers"])
+
+
 @app.post("/api/monsters/{monster_id}/update")
 def update_monster(monster_id: str):
     m = _get_monster(monster_id)

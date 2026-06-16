@@ -69,12 +69,54 @@ function LogModal({ monster, onClose }) {
   );
 }
 
+function ResourceBars({ stats }) {
+  if (!stats || stats.cpu_percent === null) return null;
+  const cpuPct = Math.min(stats.cpu_percent, 100);
+  const memPct = Math.min(stats.mem_percent, 100);
+  const memMb = stats.mem_mb;
+  return (
+    <div className="stats">
+      <div className="stat-row">
+        <span className="stat-label">CPU</span>
+        <div className="stat-bar-track">
+          <div className="stat-bar-fill cpu" style={{ width: `${cpuPct}%` }} />
+        </div>
+        <span className="stat-value">{stats.cpu_percent.toFixed(1)} %</span>
+      </div>
+      <div className="stat-row">
+        <span className="stat-label">RAM</span>
+        <div className="stat-bar-track">
+          <div className="stat-bar-fill mem" style={{ width: `${memPct}%` }} />
+        </div>
+        <span className="stat-value">
+          {memMb >= 1024
+            ? `${(memMb / 1024).toFixed(1)} GB`
+            : `${memMb.toFixed(0)} MB`}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function MonsterCard({ monster, onAction, onToast }) {
   const [busy, setBusy] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [stats, setStats] = useState(null);
 
   const state = monster.status?.state ?? "not_installed";
+
+  useEffect(() => {
+    if (state === "not_installed" || !monster.containers?.length) return;
+    const fetchStats = () =>
+      fetch(`/api/monsters/${monster.id}/stats`)
+        .then((r) => r.json())
+        .then(setStats)
+        .catch(() => {});
+    fetchStats();
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, [monster.id, monster.containers?.length, state]);
   const containers = monster.status?.containers ?? [];
   const isRunning = state === "running";
   const isNotInstalled = state === "not_installed";
@@ -129,6 +171,8 @@ export default function MonsterCard({ monster, onAction, onToast }) {
         </div>
 
         <ContainerPills containers={containers} />
+
+        <ResourceBars stats={stats} />
 
         <div className="actions">
           {monster.url && isRunning && (
