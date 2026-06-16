@@ -222,6 +222,43 @@
   to { transform: rotate(360deg); }
 }
 
+/* License badge */
+.license-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  margin-top: 5px;
+}
+
+.license-badge.valid {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.license-badge.warning {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.license-badge.invalid {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.license-badge.unknown {
+  background: rgba(255, 255, 255, 0.04);
+  color: #555;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 /* Resource bars */
 .stats {
   display: flex;

@@ -69,6 +69,45 @@ function LogModal({ monster, onClose }) {
   );
 }
 
+const PLAN_LABELS = { pro: "Pro", basic: "Basic", trial: "Trial", free: "Free" };
+
+function LicenseBadge({ license }) {
+  if (!license || !license.configured) return null;
+
+  if (license.error === "unreachable" || license.error === "timeout") {
+    return <span className="license-badge unknown">Lizenzserver nicht erreichbar</span>;
+  }
+
+  if (!license.valid) {
+    const labels = {
+      invalid_key: "Ungültiger Key",
+      expired: "Lizenz abgelaufen",
+      suspended: "Lizenz gesperrt",
+    };
+    return <span className="license-badge invalid">✗ {labels[license.error] ?? license.error}</span>;
+  }
+
+  const plan = PLAN_LABELS[license.plan] ?? license.plan;
+  const daysLeft = license.days_left;
+  const isWarning = daysLeft !== null && daysLeft !== undefined && daysLeft <= 30;
+
+  if (isWarning) {
+    return (
+      <span className="license-badge warning">
+        ⚠ {plan} · noch {daysLeft} Tage
+      </span>
+    );
+  }
+
+  const until = license.valid_until
+    ? ` · bis ${license.valid_until}`
+    : "";
+
+  return (
+    <span className="license-badge valid">✓ {plan}{until}</span>
+  );
+}
+
 function ResourceBars({ stats }) {
   if (!stats || stats.cpu_percent === null) return null;
   const cpuPct = Math.min(stats.cpu_percent, 100);
@@ -103,6 +142,7 @@ export default function MonsterCard({ monster, onAction, onToast }) {
   const [updating, setUpdating] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [stats, setStats] = useState(null);
+  const [license, setLicense] = useState(null);
 
   const state = monster.status?.state ?? "not_installed";
 
@@ -117,6 +157,18 @@ export default function MonsterCard({ monster, onAction, onToast }) {
     const interval = setInterval(fetchStats, 5000);
     return () => clearInterval(interval);
   }, [monster.id, monster.containers?.length, state]);
+
+  useEffect(() => {
+    if (state === "not_installed") return;
+    const fetchLicense = () =>
+      fetch(`/api/monsters/${monster.id}/license`)
+        .then((r) => r.json())
+        .then(setLicense)
+        .catch(() => {});
+    fetchLicense();
+    const interval = setInterval(fetchLicense, 60_000);
+    return () => clearInterval(interval);
+  }, [monster.id, state]);
   const containers = monster.status?.containers ?? [];
   const isRunning = state === "running";
   const isNotInstalled = state === "not_installed";
@@ -167,7 +219,10 @@ export default function MonsterCard({ monster, onAction, onToast }) {
               </div>
             </div>
           </div>
-          <StatusBadge state={state} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
+            <StatusBadge state={state} />
+            <LicenseBadge license={license} />
+          </div>
         </div>
 
         <ContainerPills containers={containers} />

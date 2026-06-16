@@ -6,6 +6,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./registry.json:/app/registry.json:ro
+    env_file:
+      - .env
     networks:
       - hub
 

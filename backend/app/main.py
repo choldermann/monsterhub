@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from .docker_service import DockerService
 from .config import load_registry
+from . import license_service
 
 app = FastAPI(title="MonsterHub API")
 
@@ -53,6 +54,12 @@ def restart_monster(monster_id: str):
     m = _get_monster(monster_id)
     docker_svc.restart_containers(m["containers"])
     return {"ok": True}
+
+
+@app.get("/api/monsters/{monster_id}/license")
+async def get_license(monster_id: str):
+    _get_monster(monster_id)
+    return await license_service.check_license(monster_id)
 
 
 @app.get("/api/monsters/{monster_id}/stats")
