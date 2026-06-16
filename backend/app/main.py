@@ -55,6 +55,13 @@ def restart_monster(monster_id: str):
     return {"ok": True}
 
 
+@app.post("/api/monsters/{monster_id}/update")
+def update_monster(monster_id: str):
+    m = _get_monster(monster_id)
+    result = docker_svc.update_monster(m["containers"])
+    return result
+
+
 @app.get("/api/monsters/{monster_id}/logs")
 def get_logs(monster_id: str, container: Optional[str] = None, lines: int = 150):
     m = _get_monster(monster_id)

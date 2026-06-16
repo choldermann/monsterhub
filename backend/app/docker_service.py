@@ -60,6 +60,50 @@ class DockerService:
             except docker.errors.NotFound:
                 pass
 
+    def update_monster(self, containers: List[str]) -> dict:
+        pulled = []
+        already_latest = []
+        skipped = []
+        errors = []
+
+        for name in containers:
+            try:
+                c = self.client.containers.get(name)
+            except docker.errors.NotFound:
+                skipped.append(name)
+                continue
+
+            image_name = c.attrs.get("Config", {}).get("Image", "")
+            old_image_id = c.attrs.get("Image", "")
+
+            if not image_name or image_name.startswith("sha256:"):
+                skipped.append(name)
+                continue
+
+            try:
+                new_image = self.client.images.pull(image_name)
+                if new_image.id != old_image_id:
+                    pulled.append(name)
+                else:
+                    already_latest.append(name)
+            except Exception:
+                skipped.append(name)
+
+        if pulled:
+            for name in containers:
+                try:
+                    self.client.containers.get(name).restart()
+                except Exception:
+                    errors.append(name)
+
+        return {
+            "updated": len(pulled) > 0,
+            "pulled": pulled,
+            "already_latest": already_latest,
+            "skipped": skipped,
+            "errors": errors,
+        }
+
     def get_logs(self, container_name: str, lines: int = 150) -> str:
         try:
             c = self.client.containers.get(container_name)

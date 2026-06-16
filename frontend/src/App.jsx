@@ -73,7 +73,7 @@ export default function App() {
       ) : (
         <div className="grid">
           {monsters.map((m) => (
-            <MonsterCard key={m.id} monster={m} onAction={handleAction} />
+            <MonsterCard key={m.id} monster={m} onAction={handleAction} onToast={addToast} />
           ))}
         </div>
       )}
